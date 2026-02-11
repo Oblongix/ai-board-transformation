@@ -10,7 +10,9 @@ const signInTab = document.getElementById("signInTab");
 const registerTab = document.getElementById("registerTab");
 const authForm = document.getElementById("authForm");
 const authSubmitBtn = document.getElementById("authSubmitBtn");
+const resetPasswordBtn = document.getElementById("resetPasswordBtn");
 const authError = document.getElementById("authError");
+const authStatus = document.getElementById("authStatus");
 const nameInput = document.getElementById("nameInput");
 const emailInput = document.getElementById("emailInput");
 const passwordInput = document.getElementById("passwordInput");
@@ -66,6 +68,14 @@ if (!auth || !db) {
   authError.textContent = "Firebase services unavailable. Check configuration in public/firebase-config.js.";
 }
 
+function renderAuthStatus() {
+  if (!authStatus) return;
+  const projectId = services.config && services.config.projectId ? services.config.projectId : "unknown-project";
+  authStatus.textContent = services.usingMock
+    ? `Mock mode active (${projectId})`
+    : `Live Firebase: ${projectId}`;
+}
+
 function setAuthMode(mode) {
   authMode = mode;
   const isRegister = mode === "register";
@@ -74,6 +84,7 @@ function setAuthMode(mode) {
   nameInput.style.display = isRegister ? "block" : "none";
   nameInput.required = isRegister;
   authSubmitBtn.textContent = isRegister ? "Create Account" : "Continue to Simulator";
+  resetPasswordBtn.disabled = isRegister;
 }
 
 function showAuthError(message) {
@@ -92,7 +103,10 @@ function formatAuthError(error, mode) {
   if (mode === "register" && code.includes("auth/email-already-in-use")) {
     return "That email already has an account. Use Existing Account to sign in.";
   }
-  return error && error.message ? error.message : "Authentication failed.";
+  if (error && error.message) {
+    return code ? `${error.message} (${code})` : error.message;
+  }
+  return code ? `Authentication failed. (${code})` : "Authentication failed.";
 }
 
 function hideAuthError() {
@@ -494,6 +508,25 @@ signOutBtn.addEventListener("click", async () => {
   await auth.signOut();
 });
 
+resetPasswordBtn.addEventListener("click", async () => {
+  if (!auth || busy) return;
+  hideAuthError();
+  const email = emailInput.value.trim();
+  if (!email) {
+    showAuthError("Enter your email first, then click Reset Password.");
+    return;
+  }
+  setBusy(true);
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showAuthError("Password reset email sent. Check your inbox.");
+  } catch (error) {
+    showAuthError(formatAuthError(error, "signin"));
+  } finally {
+    setBusy(false);
+  }
+});
+
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const text = messageInput.value.trim();
@@ -507,7 +540,7 @@ authForm.addEventListener("submit", async (event) => {
   hideAuthError();
   setBusy(true);
   const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
+  const password = passwordInput.value;
   try {
     if (authMode === "register") {
       const name = nameInput.value.trim();
@@ -565,3 +598,4 @@ if (auth) {
 }
 
 setAuthMode("signin");
+renderAuthStatus();

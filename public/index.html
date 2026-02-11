@@ -14,6 +14,7 @@
     <section class="auth-card">
       <h1>Board AI Transformation Simulator</h1>
       <p>Sign in to run and store boardroom simulations in Firestore.</p>
+      <p id="authStatus" class="auth-status"></p>
       <div class="auth-tabs">
         <button id="signInTab" class="is-active" type="button">Existing Account</button>
         <button id="registerTab" type="button">Create Account</button>
@@ -22,7 +23,10 @@
         <input id="nameInput" type="text" placeholder="Full name (register only)" />
         <input id="emailInput" type="email" placeholder="Email" required />
         <input id="passwordInput" type="password" placeholder="Password" required />
-        <button id="authSubmitBtn" type="submit">Continue to Simulator</button>
+        <div class="auth-actions">
+          <button id="authSubmitBtn" type="submit">Continue to Simulator</button>
+          <button id="resetPasswordBtn" type="button">Reset Password</button>
+        </div>
       </form>
       <p id="authError" class="auth-error" hidden></p>
     </section>

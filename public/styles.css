@@ -60,6 +60,16 @@ body {
   margin: 0.35rem 0 0.8rem;
 }
 
+.auth-status {
+  display: inline-block;
+  font-size: 0.78rem;
+  margin: 0 0 0.5rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(163, 224, 198, 0.38);
+  background: rgba(18, 39, 43, 0.74);
+}
+
 .auth-tabs {
   display: flex;
   gap: 0.4rem;
@@ -78,6 +88,16 @@ body {
   display: grid;
   gap: 0.45rem;
   margin-top: 0.75rem;
+}
+
+.auth-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+}
+
+#resetPasswordBtn {
+  background: rgba(28, 56, 64, 0.8);
 }
 
 .auth-error {
