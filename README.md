@@ -32,9 +32,35 @@ By default on localhost, the app runs in mock Firebase mode.
 
 ## Configure Real Firebase
 
-1. Update `public/firebase-config.js` with your own Firebase app config.
-2. Update `.firebaserc` default project id to your separate project.
-3. Optional on localhost: set `window.FORCE_REAL_FIREBASE = true` in DevTools before reload.
+Run the bootstrap script to create/configure infra and deploy in one pass:
+
+```powershell
+npm run bootstrap:firebase -- `
+  -ProjectId YOUR_FIREBASE_PROJECT_ID `
+  -BillingAccount YOUR_BILLING_ACCOUNT_ID `
+  -ProjectName "AI Board Transformation" `
+  -Region us-central1 `
+  -WebAppDisplayName "ai-board-transformation-web"
+```
+
+What it does:
+
+- Creates project (if needed).
+- Links billing account.
+- Enables required APIs.
+- Adds Firebase resources.
+- Creates default Firestore database.
+- Initializes Auth and enables email/password provider.
+- Writes `.firebaserc` and `public/firebase-config.js`.
+- Deploys hosting + Firestore rules/indexes.
+
+Optional flags:
+
+- `-SkipCreateProject`
+- `-SkipNpmInstall`
+- `-SkipDeploy`
+
+On localhost, you can still force real Firebase with `window.FORCE_REAL_FIREBASE = true` before reload.
 
 ## Deploy
 

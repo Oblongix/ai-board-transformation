@@ -8,6 +8,7 @@
     "start": "node scripts/start-static.js",
     "harness": "node scripts/tune.js",
     "scenario-review": "node scripts/scenario-review.js",
+    "bootstrap:firebase": "pwsh -File scripts/bootstrap-firebase.ps1",
     "deploy": "firebase deploy --only \"hosting,firestore:rules,firestore:indexes\"",
     "test": "node --test"
   },
