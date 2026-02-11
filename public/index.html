@@ -20,9 +20,9 @@
         <button id="registerTab" type="button">Create Account</button>
       </div>
       <form id="authForm" class="auth-form" novalidate>
-        <input id="nameInput" type="text" placeholder="Full name (register only)" />
-        <input id="emailInput" type="email" placeholder="Work email" required />
-        <input id="passwordInput" type="password" placeholder="Password" required />
+        <input id="nameInput" type="text" placeholder="Full name (register only)" autocomplete="name" />
+        <input id="emailInput" type="email" placeholder="Work email" required autocomplete="username" />
+        <input id="passwordInput" type="password" placeholder="Password" required autocomplete="current-password" />
         <div class="auth-actions">
           <button id="authSubmitBtn" type="submit">Continue to Simulator</button>
           <button id="resetPasswordBtn" type="button">Reset Password</button>

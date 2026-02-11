@@ -83,6 +83,7 @@ function setAuthMode(mode) {
   registerTab.classList.toggle("is-active", isRegister);
   nameInput.style.display = isRegister ? "block" : "none";
   nameInput.required = isRegister;
+  passwordInput.autocomplete = isRegister ? "new-password" : "current-password";
   authSubmitBtn.textContent = isRegister ? "Create Account" : "Continue to Simulator";
   if (resetPasswordBtn) {
     resetPasswordBtn.disabled = isRegister;
