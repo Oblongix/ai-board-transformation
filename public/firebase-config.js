@@ -1,11 +1,11 @@
 (function () {
   const firebaseConfig = window.__FIREBASE_CONFIG__ || {
-    apiKey: "AIzaSyDagq1dAsNTBiwgDf4mW9WxFztiwErsDOg",
-    authDomain: "ai-board-trans-vpowell4.firebaseapp.com",
-    projectId: "ai-board-trans-vpowell4",
-    storageBucket: "ai-board-trans-vpowell4.firebasestorage.app",
-    messagingSenderId: "47149279314",
-    appId: "1:47149279314:web:6d4985efaea819a031578b",
+    apiKey: "AIzaSyC9RBe-xM2kbUkKYm743G30ny8c6R6fwsM",
+    authDomain: "ceoaisimulate.firebaseapp.com",
+    projectId: "ceoaisimulate",
+    storageBucket: "ceoaisimulate.firebasestorage.app",
+    messagingSenderId: "84951833489",
+    appId: "1:84951833489:web:6c7211dc6be8a0135fd830",
   };
 
   const isPlaceholder =
