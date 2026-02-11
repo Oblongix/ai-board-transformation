@@ -112,6 +112,26 @@ function addDiagnostic(level, event, details = {}) {
   }
 }
 
+function setShellVisibility(element, visible, displayValue) {
+  if (!element) return;
+  element.hidden = !visible;
+  if (visible) {
+    element.style.removeProperty("display");
+    element.style.setProperty("display", displayValue, "important");
+  } else {
+    element.style.setProperty("display", "none", "important");
+  }
+}
+
+function snapshotShellState() {
+  return {
+    authHidden: authShell ? authShell.hidden : null,
+    appHidden: appShell ? appShell.hidden : null,
+    authDisplay: authShell ? getComputedStyle(authShell).display : "",
+    appDisplay: appShell ? getComputedStyle(appShell).display : "",
+  };
+}
+
 if (!auth || !db) {
   authError.hidden = false;
   authError.textContent = "Firebase services unavailable. Check configuration in public/firebase-config.js.";
@@ -200,18 +220,18 @@ function hideAuthError() {
 }
 
 function showSignedOutState() {
-  authShell.hidden = false;
-  appShell.hidden = true;
+  setShellVisibility(authShell, true, "grid");
+  setShellVisibility(appShell, false, "none");
   sessionState = null;
   sessionDocId = null;
   readOnlySnapshot = false;
   resetChat();
-  addDiagnostic("info", "auth_state_signed_out");
+  addDiagnostic("info", "auth_state_signed_out", snapshotShellState());
 }
 
 async function showSignedInState(user) {
-  authShell.hidden = true;
-  appShell.hidden = false;
+  setShellVisibility(authShell, false, "none");
+  setShellVisibility(appShell, true, "grid");
   renderSelectors();
   await refreshSavedSessions();
   savedHint.textContent = services.usingMock
@@ -223,6 +243,7 @@ async function showSignedInState(user) {
   addDiagnostic("info", "auth_state_signed_in", {
     uid: user && user.uid ? user.uid : "",
     email: user && user.email ? user.email : "",
+    ...snapshotShellState(),
   });
 }
 
@@ -667,6 +688,7 @@ async function runDiagnostics() {
     hasDb: !!db,
     currentUser: currentUser ? { uid: currentUser.uid, email: currentUser.email || "" } : null,
     config: sanitizeConfig(services.config),
+    shellState: snapshotShellState(),
   });
 
   if (auth && email) {
@@ -797,7 +819,7 @@ authForm.addEventListener("submit", async (event) => {
     } else {
       const cred = await auth.signInWithEmailAndPassword(email, password);
       await showSignedInState(cred.user);
-      addDiagnostic("info", "signin_success", { email, uid: cred.user.uid });
+      addDiagnostic("info", "signin_success", { email, uid: cred.user.uid, ...snapshotShellState() });
     }
   } catch (error) {
     addDiagnostic("error", "auth_submit_failed", {
