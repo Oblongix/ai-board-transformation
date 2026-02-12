@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-
 export const DEFAULT_PROMPT_PROFILE = {
   "value-pools": 1.05,
   "governance-control": 1.33,
@@ -28,17 +25,7 @@ function sanitizeProfile(profile) {
 }
 
 export function loadProfileFromDisk(baseDir) {
-  const root = baseDir || process.cwd();
-  const filePath = path.join(root, "config", "tuned-prompt-profile.json");
-  try {
-    if (!fs.existsSync(filePath)) {
-      return { ...DEFAULT_PROMPT_PROFILE };
-    }
-    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    return sanitizeProfile(parsed);
-  } catch {
-    return { ...DEFAULT_PROMPT_PROFILE };
-  }
+  return { ...DEFAULT_PROMPT_PROFILE };
 }
 
 export function resolvePromptProfile(profile) {
