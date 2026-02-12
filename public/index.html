@@ -69,6 +69,36 @@
     </header>
 
     <section class="main-pane">
+      <aside class="options-panel">
+        <div class="options-area">
+          <h2>Board Decision Options</h2>
+          <p class="subtext">Round flow: select one decision, then submit to process the next quarter.</p>
+          <div id="optionsWrap" class="options-wrap"></div>
+          <div class="decision-queue">
+            <h3>Quarter Decision</h3>
+            <p id="selectedDecisionText" class="subtext">No decision selected.</p>
+            <div class="decision-actions">
+              <button id="advanceQuarterBtn" type="button">Submit Decision & Advance Quarter</button>
+              <button id="clearDecisionBtn" type="button">Clear Selection</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="chat-panel">
+        <div id="chatWindow" class="chat-window" aria-live="polite"></div>
+
+        <form id="chatForm" class="composer">
+          <input
+            id="messageInput"
+            type="text"
+            placeholder="Ask a board question or type an action..."
+            autocomplete="off"
+          />
+          <button type="submit">Send</button>
+        </form>
+      </section>
+
       <aside class="metrics-panel">
         <h2>Business Metrics</h2>
         <div class="scenario-brief">
@@ -100,25 +130,6 @@
           <p id="savedHint" class="subtext">Snapshots are saved in Firestore each turn.</p>
         </div>
       </aside>
-
-      <section class="chat-panel">
-        <div id="chatWindow" class="chat-window" aria-live="polite"></div>
-
-        <div class="options-area">
-          <h3>Board Decision Options</h3>
-          <div id="optionsWrap" class="options-wrap"></div>
-        </div>
-
-        <form id="chatForm" class="composer">
-          <input
-            id="messageInput"
-            type="text"
-            placeholder="Ask a board question or type an action..."
-            autocomplete="off"
-          />
-          <button type="submit">Send</button>
-        </form>
-      </section>
     </section>
   </main>
 

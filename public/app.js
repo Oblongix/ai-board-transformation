@@ -29,6 +29,9 @@ const startBtn = document.getElementById("startBtn");
 const signOutBtn = document.getElementById("signOutBtn");
 const chatWindow = document.getElementById("chatWindow");
 const optionsWrap = document.getElementById("optionsWrap");
+const selectedDecisionText = document.getElementById("selectedDecisionText");
+const advanceQuarterBtn = document.getElementById("advanceQuarterBtn");
+const clearDecisionBtn = document.getElementById("clearDecisionBtn");
 const chatForm = document.getElementById("chatForm");
 const messageInput = document.getElementById("messageInput");
 const metricsGrid = document.getElementById("metricsGrid");
@@ -64,6 +67,10 @@ let transcript = [];
 let readOnlySnapshot = false;
 let currentUser = null;
 let scenariosBySector = new Map();
+let renderedAuthUid = null;
+let selectedDecisionId = "";
+let selectedDecisionTitle = "";
+let selectedDecisionIndex = 0;
 const principleMap = new Map(BOOK_PRINCIPLES.map((item) => [item.id, item.title]));
 const sectorMap = new Map(SECTORS.map((item) => [item.id, item]));
 const diagnostics = [];
@@ -188,7 +195,6 @@ function setAuthMode(mode) {
   if (resetPasswordBtn) {
     resetPasswordBtn.disabled = isRegister;
   }
-  addDiagnostic("info", "auth_mode_changed", { mode });
 }
 
 function showAuthError(message) {
@@ -223,20 +229,38 @@ function showSignedOutState() {
   setShellVisibility(authShell, true, "grid");
   setShellVisibility(appShell, false, "none");
   sessionState = null;
+  sessionView = null;
   sessionDocId = null;
   readOnlySnapshot = false;
+  renderedAuthUid = null;
+  selectedDecisionId = "";
+  selectedDecisionTitle = "";
+  selectedDecisionIndex = 0;
+  savedSessionSelect.innerHTML = "";
+  savedHint.textContent = "Snapshots are saved in Firestore each turn.";
   resetChat();
+  updateSelectedDecisionLabel();
+  setBusy(false);
   addDiagnostic("info", "auth_state_signed_out", snapshotShellState());
 }
 
 async function showSignedInState(user) {
   setShellVisibility(authShell, false, "none");
   setShellVisibility(appShell, true, "grid");
-  renderSelectors();
-  await refreshSavedSessions();
-  savedHint.textContent = services.usingMock
-    ? "Running in localhost mock mode. Set window.FORCE_REAL_FIREBASE=1 to use live project."
-    : "Connected to Firebase.";
+  if (renderedAuthUid !== user.uid) {
+    renderSelectors();
+    renderedAuthUid = user.uid;
+  }
+  const refreshed = await refreshSavedSessions(user);
+  if (refreshed) {
+    savedHint.textContent = services.usingMock
+      ? "Running in localhost mock mode. Set window.FORCE_REAL_FIREBASE=1 to use live project."
+      : "Connected to Firebase.";
+  }
+  if (!sessionView) {
+    updateSelectedDecisionLabel();
+    syncAdvanceQuarterButton();
+  }
   if (!sessionView && chatWindow.childElementCount === 0) {
     appendMessage("system", `Signed in as ${user.email}. Select role/sector/scenario and start session.`);
   }
@@ -295,6 +319,77 @@ function pushTranscript(role, content) {
     content,
     at: new Date().toISOString(),
   });
+}
+
+function updateSelectedDecisionLabel() {
+  if (!selectedDecisionText) return;
+  if (readOnlySnapshot) {
+    selectedDecisionText.textContent = "Read-only snapshot loaded. Start a new session to submit decisions.";
+    return;
+  }
+  if (!selectedDecisionId) {
+    selectedDecisionText.textContent = "No decision selected.";
+    return;
+  }
+  selectedDecisionText.textContent = `Queued: Option ${selectedDecisionIndex}. ${selectedDecisionTitle}`;
+}
+
+function syncAdvanceQuarterButton() {
+  if (!advanceQuarterBtn) return;
+  const ready = !!sessionState && !readOnlySnapshot && !!selectedDecisionId;
+  advanceQuarterBtn.disabled = busy || !ready;
+}
+
+function clearSelectedDecision({ rerender = true } = {}) {
+  selectedDecisionId = "";
+  selectedDecisionTitle = "";
+  selectedDecisionIndex = 0;
+  updateSelectedDecisionLabel();
+  syncAdvanceQuarterButton();
+  if (rerender && sessionView) {
+    renderOptions(sessionView);
+  }
+}
+
+function selectDecision(option, { rerender = true } = {}) {
+  if (!option || !option.id) return;
+  selectedDecisionId = option.id;
+  selectedDecisionTitle = option.title || "";
+  selectedDecisionIndex = Number(option.index || 0);
+  updateSelectedDecisionLabel();
+  syncAdvanceQuarterButton();
+  if (rerender && sessionView) {
+    renderOptions(sessionView);
+  }
+}
+
+function pickDefaultDecision(view) {
+  if (!view || !Array.isArray(view.options) || view.options.length === 0) {
+    clearSelectedDecision({ rerender: false });
+    return;
+  }
+  const preferred = view.options.find((item) => item.recommended) || view.options[0];
+  selectDecision(preferred, { rerender: false });
+}
+
+function syncSelectedDecisionWithView(view) {
+  if (readOnlySnapshot) {
+    clearSelectedDecision({ rerender: false });
+    return;
+  }
+  if (!view || !Array.isArray(view.options) || view.options.length === 0) {
+    clearSelectedDecision({ rerender: false });
+    return;
+  }
+  const current = view.options.find((item) => item.id === selectedDecisionId);
+  if (!current) {
+    pickDefaultDecision(view);
+    return;
+  }
+  selectedDecisionTitle = current.title || selectedDecisionTitle;
+  selectedDecisionIndex = Number(current.index || selectedDecisionIndex || 0);
+  updateSelectedDecisionLabel();
+  syncAdvanceQuarterButton();
 }
 
 function renderScenarioPreview(scenarioId, sectorId) {
@@ -361,31 +456,40 @@ function renderPrinciples(view) {
 function renderOptions(view) {
   optionsWrap.innerHTML = "";
   if (readOnlySnapshot) {
+    clearSelectedDecision({ rerender: false });
     const msg = document.createElement("p");
     msg.className = "subtext";
     msg.textContent = "Snapshot loaded in read-only mode. Start a new session to continue simulation.";
     optionsWrap.appendChild(msg);
+    syncAdvanceQuarterButton();
     return;
   }
   if (!view.options || view.options.length === 0) {
+    clearSelectedDecision({ rerender: false });
     const msg = document.createElement("p");
     msg.className = "subtext";
     msg.textContent = "No options left. Session is complete.";
     optionsWrap.appendChild(msg);
+    syncAdvanceQuarterButton();
     return;
   }
   view.options.forEach((option) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "option-btn";
+    if (option.id === selectedDecisionId) {
+      button.classList.add("is-selected");
+    }
     button.innerHTML = `
       <span class="title">Option ${option.index}. ${option.title}</span>
       ${option.recommended ? '<span class="badge">Board Pack Priority</span>' : ""}
       <span class="detail">${option.description}</span>
     `;
-    button.addEventListener("click", () => sendTurn({ optionId: option.id, message: option.title }));
+    button.addEventListener("click", () => selectDecision(option));
     optionsWrap.appendChild(button);
   });
+  updateSelectedDecisionLabel();
+  syncAdvanceQuarterButton();
 }
 
 function renderScenarioDetails(view) {
@@ -402,6 +506,7 @@ function renderScenarioDetails(view) {
 
 function renderSession(view, includeBoardMessage = true) {
   sessionView = view;
+  syncSelectedDecisionWithView(view);
   renderScenarioDetails(view);
   renderMetrics(view);
   renderDimensions(view);
@@ -422,9 +527,14 @@ function setBusy(value) {
   scenarioSelect.disabled = value || readOnlySnapshot;
   companyInput.disabled = value || readOnlySnapshot;
   messageInput.disabled = value || !sessionState || readOnlySnapshot;
-  loadSavedBtn.disabled = value;
+  syncLoadSavedButton();
+  syncAdvanceQuarterButton();
   authSubmitBtn.disabled = value;
-  addDiagnostic("info", "ui_busy_changed", { busy: value });
+}
+
+function syncLoadSavedButton() {
+  const hasSelection = !!currentUser && savedSessionSelect.options.length > 0 && !!savedSessionSelect.value;
+  loadSavedBtn.disabled = busy || !hasSelection;
 }
 
 async function saveSnapshot() {
@@ -451,37 +561,68 @@ async function saveSnapshot() {
   await db.collection("simulationSessions").doc(sessionDocId).set(payload, { merge: true });
 }
 
-async function refreshSavedSessions() {
-  if (!currentUser) return;
-  savedSessionSelect.innerHTML = "";
-  const query = await db
-    .collection("simulationSessions")
-    .where("ownerUid", "==", currentUser.uid)
-    .get();
-
-  const docs = (query.docs || []).slice().sort((a, b) => {
-    const av = a.data().updatedAt || "";
-    const bv = b.data().updatedAt || "";
-    return av > bv ? -1 : av < bv ? 1 : 0;
-  });
-
-  if (docs.length === 0) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "No saved sessions";
-    savedSessionSelect.appendChild(option);
-    return;
+function toMillis(value) {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
   }
-  docs.forEach((doc) => {
-    const data = doc.data();
-    const label = `${data.scenarioName || "Scenario"} | ${data.roleName || "Role"} | Score ${Number(
-      data.score || 0
-    ).toFixed(1)} | Turn ${data.turn || 0}`;
-    const option = document.createElement("option");
-    option.value = doc.id;
-    option.textContent = label;
-    savedSessionSelect.appendChild(option);
-  });
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (value.seconds && typeof value.seconds === "number") {
+    const nanos = typeof value.nanoseconds === "number" ? value.nanoseconds : 0;
+    return value.seconds * 1000 + Math.floor(nanos / 1000000);
+  }
+  return 0;
+}
+
+async function refreshSavedSessions(user = currentUser) {
+  if (!user) {
+    syncLoadSavedButton();
+    return false;
+  }
+  savedSessionSelect.innerHTML = "";
+  try {
+    const query = await db
+      .collection("simulationSessions")
+      .where("ownerUid", "==", user.uid)
+      .get();
+
+    const docs = (query.docs || []).slice().sort((a, b) => {
+      const ad = a.data();
+      const bd = b.data();
+      const at = toMillis(ad.updatedAt) || toMillis(ad.createdAt);
+      const bt = toMillis(bd.updatedAt) || toMillis(bd.createdAt);
+      return bt - at;
+    });
+
+    if (docs.length === 0) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No saved sessions";
+      savedSessionSelect.appendChild(option);
+      syncLoadSavedButton();
+      return true;
+    }
+
+    docs.forEach((doc) => {
+      const data = doc.data();
+      const label = `${data.scenarioName || "Scenario"} | ${data.roleName || "Role"} | Score ${Number(
+        data.score || 0
+      ).toFixed(1)} | Turn ${data.turn || 0}`;
+      const option = document.createElement("option");
+      option.value = doc.id;
+      option.textContent = label;
+      savedSessionSelect.appendChild(option);
+    });
+    syncLoadSavedButton();
+    return true;
+  } catch (error) {
+    savedHint.textContent = `Failed to load saved sessions: ${error.message}`;
+    addDiagnostic("error", "refresh_saved_sessions_failed", { error: toErrorDetails(error) });
+    syncLoadSavedButton();
+    return false;
+  }
 }
 
 async function startSession() {
@@ -559,6 +700,18 @@ async function sendTurn(payload) {
     messageInput.value = "";
     setBusy(false);
   }
+}
+
+async function submitQueuedDecision() {
+  if (!sessionState || busy || readOnlySnapshot) return;
+  if (!selectedDecisionId) {
+    appendMessage("system", "Select a board decision first, then submit to advance the quarter.");
+    return;
+  }
+  await sendTurn({
+    optionId: selectedDecisionId,
+    message: selectedDecisionTitle || "Board decision selected",
+  });
 }
 
 async function loadSavedSnapshot() {
@@ -645,6 +798,13 @@ scenarioSelect.addEventListener("change", () => {
 });
 startBtn.addEventListener("click", startSession);
 loadSavedBtn.addEventListener("click", loadSavedSnapshot);
+savedSessionSelect.addEventListener("change", () => syncLoadSavedButton());
+if (advanceQuarterBtn) {
+  advanceQuarterBtn.addEventListener("click", submitQueuedDecision);
+}
+if (clearDecisionBtn) {
+  clearDecisionBtn.addEventListener("click", () => clearSelectedDecision());
+}
 signOutBtn.addEventListener("click", async () => {
   if (!auth) return;
   await auth.signOut();
@@ -814,10 +974,12 @@ authForm.addEventListener("submit", async (event) => {
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
+      currentUser = cred.user || null;
       await showSignedInState(cred.user);
       addDiagnostic("info", "register_success", { email, uid: cred.user.uid });
     } else {
       const cred = await auth.signInWithEmailAndPassword(email, password);
+      currentUser = cred.user || null;
       await showSignedInState(cred.user);
       addDiagnostic("info", "signin_success", { email, uid: cred.user.uid, ...snapshotShellState() });
     }
@@ -858,6 +1020,8 @@ if (auth) {
 
 setAuthMode("signin");
 renderAuthStatus();
+updateSelectedDecisionLabel();
+syncAdvanceQuarterButton();
 if (diagPanel && new URLSearchParams(location.search).get("diag") === "1") {
   diagPanel.open = true;
 }

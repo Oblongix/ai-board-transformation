@@ -39,26 +39,11 @@
       serverTimestamp() {
         return { __ts: new Date().toISOString() };
       },
-      arrayUnion(...items) {
-        return { __arrayUnion: items };
-      },
     };
 
     function normalize(v) {
       if (v && v.__ts) return v.__ts;
       return v;
-    }
-
-    function applyUpdate(target, data) {
-      for (const [k, v] of Object.entries(data)) {
-        const val = normalize(v);
-        if (val && val.__arrayUnion) {
-          const curr = Array.isArray(target[k]) ? target[k] : [];
-          target[k] = Array.from(new Set([...curr, ...val.__arrayUnion]));
-        } else {
-          target[k] = val;
-        }
-      }
     }
 
     const auth = {
@@ -117,11 +102,6 @@
               });
               store[name][id] = opts && opts.merge ? { ...current, ...input } : input;
             },
-            async update(data) {
-              const current = store[name][id] || {};
-              applyUpdate(current, data);
-              store[name][id] = current;
-            },
             async get() {
               const data = store[name][id];
               return { exists: !!data, id, data: () => data };
@@ -138,31 +118,16 @@
           return { id };
         },
         where(field, op, value) {
-          const q = {
-            orderBy(orderField, direction) {
-              this.orderField = orderField;
-              this.direction = String(direction || "asc").toLowerCase();
-              return this;
-            },
+          return {
             async get() {
-              let docs = Object.entries(store[name])
+              const docs = Object.entries(store[name])
                 .map(([id, data]) => ({ id, data }))
                 .filter((item) => (op === "==" ? item.data[field] === value : true));
-              if (this.orderField) {
-                docs.sort((a, b) => {
-                  const av = a.data[this.orderField] || "";
-                  const bv = b.data[this.orderField] || "";
-                  if (av === bv) return 0;
-                  if (this.direction === "desc") return av > bv ? -1 : 1;
-                  return av > bv ? 1 : -1;
-                });
-              }
               return {
                 docs: docs.map((item) => ({ id: item.id, data: () => item.data })),
               };
             },
           };
-          return q;
         },
       };
     }

@@ -228,11 +228,12 @@ button:hover {
 .main-pane {
   min-height: 0;
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(280px, 340px);
   gap: 0.75rem;
   padding: 0.75rem;
 }
 
+.options-panel,
 .metrics-panel {
   min-height: 0;
   background: var(--panel);
@@ -242,12 +243,14 @@ button:hover {
   overflow: auto;
 }
 
+.options-panel h2,
 .metrics-panel h2,
 .metrics-panel h3 {
   margin: 0;
   font-family: "IBM Plex Serif", serif;
 }
 
+.options-panel h2,
 .metrics-panel h2 {
   font-size: 1rem;
 }
@@ -372,7 +375,7 @@ button:hover {
 .chat-panel {
   min-height: 0;
   display: grid;
-  grid-template-rows: 1fr auto auto;
+  grid-template-rows: 1fr auto;
   gap: 0.72rem;
 }
 
@@ -408,21 +411,19 @@ button:hover {
 }
 
 .options-area {
-  border: 1px solid var(--line);
-  border-radius: 0.76rem;
-  padding: 0.62rem;
-  background: var(--panel);
+  display: grid;
+  gap: 0.52rem;
 }
 
-.options-area h3 {
-  margin: 0 0 0.45rem;
+.options-area h2 {
+  margin: 0;
   font-family: "IBM Plex Serif", serif;
-  font-size: 0.98rem;
+  font-size: 1rem;
 }
 
 .options-wrap {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.5rem;
 }
 
@@ -434,6 +435,11 @@ button:hover {
   border-radius: 0.58rem;
   color: var(--text);
   min-height: 78px;
+}
+
+.option-btn.is-selected {
+  border-color: rgba(95, 227, 168, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(95, 227, 168, 0.38);
 }
 
 .option-btn .title {
@@ -495,15 +501,49 @@ button:hover {
     min-height: auto;
   }
 
-  .metrics-panel {
-    max-height: 45vh;
+  .chat-panel {
+    order: 1;
   }
 
-  .chat-panel {
-    grid-template-rows: minmax(360px, 1fr) auto auto;
+  .options-panel {
+    order: 2;
+    max-height: 42vh;
+  }
+
+  .metrics-panel {
+    order: 3;
+    max-height: 45vh;
   }
 
   .options-wrap {
     grid-template-columns: 1fr;
   }
+}
+
+.decision-queue {
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.5rem;
+  display: grid;
+  gap: 0.38rem;
+}
+
+.decision-queue h3 {
+  margin: 0;
+  font-family: "IBM Plex Serif", serif;
+  font-size: 0.9rem;
+}
+
+.decision-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+
+#advanceQuarterBtn {
+  background: linear-gradient(160deg, #2f6e5a, #1f4c3f);
+}
+
+#clearDecisionBtn {
+  background: rgba(28, 56, 64, 0.8);
 }
